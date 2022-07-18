@@ -50,3 +50,23 @@ jobs:
       run: |
         pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py  windows/view.py --clean --onefile
 
+  release_assets:
+    name: Release assets
+    needs:
+      - build-ubuntu
+      - build-windows
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config:
+          - os: ubuntu-latest
+          - os: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: ModrinthBrowser-${{ matrix.config.os }}
