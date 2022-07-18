@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>593</width>
-    <height>128</height>
+    <height>180</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -55,6 +55,37 @@
        <property name="checked">
         <bool>true</bool>
        </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Кол-во строк</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="rowsCount">
+       <item>
+        <property name="text">
+         <string>20</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>50</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>75</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>100</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item>

@@ -86,6 +86,22 @@
       </item>
      </layout>
     </item>
+    <item row="1" column="0">
+     <widget class="QSpinBox" name="page">
+      <property name="suffix">
+       <string> страница</string>
+      </property>
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="maximum">
+       <number>999</number>
+      </property>
+      <property name="stepType">
+       <enum>QAbstractSpinBox::DefaultStepType</enum>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -117,6 +133,31 @@
   <action name="settings">
    <property name="text">
     <string>Настройки</string>
+   </property>
+  </action>
+  <action name="action10">
+   <property name="text">
+    <string>10</string>
+   </property>
+  </action>
+  <action name="action20">
+   <property name="text">
+    <string>20</string>
+   </property>
+  </action>
+  <action name="action50">
+   <property name="text">
+    <string>50</string>
+   </property>
+  </action>
+  <action name="action75">
+   <property name="text">
+    <string>75</string>
+   </property>
+  </action>
+  <action name="action100">
+   <property name="text">
+    <string>100</string>
    </property>
   </action>
  </widget>

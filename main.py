@@ -2,6 +2,7 @@ import dataclasses
 import os.path
 import sys
 
+import grequests
 import requests
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QThread, QUrl, QTimer, pyqtSignal
@@ -61,10 +62,13 @@ class ModrinthBrowser(QMainWindow):
         self.settings_button: QtWidgets.QAction = self.findChild(QtWidgets.QAction, 'settings')
         self.settings_button.triggered.connect(self.open_settings)
 
+        self.page: QtWidgets.QSpinBox = self.findChild(QtWidgets.QSpinBox, 'page')
+
         self.searchTime = QTimer(self)
-        self.searchTime.timeout.connect(self.search)
+        self.searchTime.timeout.connect(lambda: self.search(self.page.value()))
         self.searchTime.setSingleShot(True)
-        self.searchBar.textEdited.connect(lambda: (self.searchTime.stop(), self.searchTime.start(1250)))
+        self.searchBar.textEdited.connect(lambda: (self.searchTime.stop(), self.searchTime.start(800)))
+        self.page.valueChanged.connect(lambda: (self.searchTime.stop(), self.searchTime.start(500)))
 
         # strech the columns
         for i in range(self.list.columnCount()):
@@ -86,8 +90,9 @@ class ModrinthBrowser(QMainWindow):
             self.open_settings()
         else:
             self.settings.load()
+        os.mkdir('cache') if not os.path.exists('cache') else None
 
-        self.search()
+        self.search(self.page.value())
 
     def open_mod(self, item):
         mod = self.projects[item.row()]
@@ -115,9 +120,13 @@ class ModrinthBrowser(QMainWindow):
         icons_in_table: QtWidgets.QCheckBox = dialog.findChild(QtWidgets.QCheckBox, 'iconsInTable')
         icons_in_table.setChecked(self.settings.icons_in_table)
 
+        rows_count: QtWidgets.QComboBox = dialog.findChild(QtWidgets.QComboBox, 'rowsCount')
+        rows_count.setCurrentText(str(self.settings.rows_count))
+
         def save_settings():
             self.settings.minecraft_path = minecraft_path.text()
             self.settings.icons_in_table = icons_in_table.isChecked()
+            self.settings.rows_count = int(rows_count.currentText())
             self.settings.save()
 
         def check_settings():
@@ -162,14 +171,16 @@ class ModrinthBrowser(QMainWindow):
             versions.setItem(row, 4, QtWidgets.QTableWidgetItem(sizeof_fmt(version['files'][0]['size'])))
         dialog.exec()
 
-    def search(self):
+    def search(self, page):
         self.statusBar().show()
         self.list.clearContents()
         self.list.setRowCount(0)
         self.projects = []
         self.searchBar.setDisabled(True)
+        self.page.setDisabled(True)
         text = self.searchBar.text()
-        self.t = self.Search(self.settings, text)
+        self.t = self.Search(self.settings, page, text)
+        self.t.text.connect(self.statusBar().showMessage)
         self.t.result.connect(self.add_to_list)
         self.t.end.connect(self.search_end)
         self.t.start()
@@ -188,9 +199,12 @@ class ModrinthBrowser(QMainWindow):
         self.t.start()
         self.progress_dialog.exec()
 
-    def search_end(self):
+    def search_end(self, total):
         self.statusBar().hide()
         self.searchBar.setDisabled(False)
+        self.page.setDisabled(False)
+        self.page.setMaximum(total // self.settings.rows_count + 1)
+        self.page.setSuffix(f' страница / {self.page.maximum()} стр.')
 
     def add_to_list(self, mod: ModInfo, i, count):
         self.projects.append(mod)
@@ -239,37 +253,54 @@ class ModrinthBrowser(QMainWindow):
     class Search(QThread):
 
         result: pyqtSignal = pyqtSignal(ModInfo, int, int)
-        end: pyqtSignal = pyqtSignal()
+        text: pyqtSignal = pyqtSignal(str)
+        end: pyqtSignal = pyqtSignal(int)
         query = None
 
-        def __init__(self, settings, query=None):
+        def __init__(self, settings, page=1, query=None):
             QThread.__init__(self)
             self.settings = settings
             self.query = query
+            self.page = page
 
         def run(self):
-            response = requests.get('https://api.modrinth.com/v2/search?limit=100' +
-                                    ('&query=' + self.query if self.query else ''))
+            self.text.emit('Получение списка модов...')
+            response = requests.get('https://api.modrinth.com/v2/search?limit=' + str(self.settings.rows_count) +
+                                    ('&query=' + self.query if self.query else '') +
+                                    '&offset=' + str((self.page - 1) * self.settings.rows_count))
             data = response.json()
             print(response.json())
+            icons = []
+            mods = []
             r = 1
             for i in data['hits']:
                 path = 'cache/' + i['project_id']
                 if not os.path.exists(path) and self.settings.icons_in_table:
                     # check if url is valid
                     if i['icon_url'] not in ['', 'null', None]:
-                        print('Downloading icon: ' + i['icon_url'])
-                        response = requests.get(i['icon_url'])
-                        with open('cache/' + i['project_id'], 'wb') as f:
-                            f.write(response.content)
+                        print('Added icon: ' + i['icon_url'])
+                        icons.append(i['icon_url'])
+                        #self.parent.download(i['icon_url'], 'cache/' + i['project_id'])
+                        # response = requests.get(i['icon_url'])
+                        # with open('cache/' + i['project_id'], 'wb') as f:
+                        #     f.write(response.content)
                     else:
                         print('Invalid icon url: ' + i['icon_url'] + ' in project ' + i['project_id'])
-
-                self.result.emit(
-                    ModInfo(i['project_id'], i['title'], i['versions'], i['downloads'], i['follows'], i['author'],
-                            i['client_side'], i['server_side']), r, len(data['hits']))
+                mods.append(ModInfo(i['project_id'], i['title'], i['versions'], i['downloads'], i['follows'], i['author'],
+                                    i['client_side'], i['server_side']))
+            self.text.emit('Скачивание иконок...')
+            response = (grequests.get(url) for url in icons)
+            response = grequests.map(response)
+            for resp in response:
+                if resp is not None:
+                    with open(os.path.join('cache', resp.url.split('/')[-2]), 'wb') as f:
+                        f.write(resp.content)
+                        print('Downloaded icon: ' + resp.url)
+            self.text.emit('')
+            for mod in mods:
+                self.result.emit(mod, r, len(data['hits']))
                 r += 1
-            self.end.emit()
+            self.end.emit(data['total_hits'])
 
 
 if __name__ == '__main__':

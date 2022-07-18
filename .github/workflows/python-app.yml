@@ -45,7 +45,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install -r requirements.txt
     - name: Build
       run: |
         pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py  windows/view.py --clean --onefile
