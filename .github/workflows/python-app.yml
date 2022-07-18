@@ -70,10 +70,12 @@ jobs:
         config:
           - os: ubuntu-latest
           - os: windows-latest
+          - name: main
+          - name: main.exe
     steps:
       - name: Checkout code
         uses: actions/checkout@v1
       - name: Download artifact
         uses: actions/download-artifact@v3
         with:
-          name: ModrinthBrowser-${{ matrix.config.os }}
+          name: ${{ matrix.config.name }}
