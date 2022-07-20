@@ -29,9 +29,9 @@ class Ui_Dialog(object):
         self.menuButton.setObjectName("menuButton")
         self.horizontalLayout.addWidget(self.menuButton)
         self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
-        self.textBrowser = QtWidgets.QTextBrowser(Dialog)
-        self.textBrowser.setObjectName("textBrowser")
-        self.gridLayout.addWidget(self.textBrowser, 1, 0, 1, 1)
+        self.gridLayout_2 = QtWidgets.QGridLayout()
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.gridLayout.addLayout(self.gridLayout_2, 1, 0, 1, 1)
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)

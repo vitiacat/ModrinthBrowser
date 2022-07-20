@@ -6,7 +6,9 @@ import sys
 import grequests
 import requests
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import QThread, QUrl, QTimer, pyqtSignal
+from PyQt5.QtCore import QThread, QUrl, QTimer, pyqtSignal, QObject, pyqtProperty
+from PyQt5.QtWebChannel import QWebChannel
+from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWidgets import QApplication, QMainWindow, QProgressBar, QTextBrowser, QLabel, QToolButton, QLineEdit, \
     QComboBox, QCheckBox
 from PyQt5.QtGui import QIcon, QDesktopServices, QCursor
@@ -64,6 +66,24 @@ categories = {
     "worldgen": "Генерация мира",
 }
 
+
+class Document(QObject):
+    textChanged = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.m_text = ""
+
+    def get_text(self):
+        return self.m_text
+
+    def set_text(self, text):
+        if self.m_text == text:
+            return
+        self.m_text = text
+        self.textChanged.emit(self.m_text)
+
+    text = pyqtProperty(str, fget=get_text, fset=set_text, notify=textChanged)
 
 class ModrinthBrowser(QMainWindow):
 
@@ -138,14 +158,27 @@ class ModrinthBrowser(QMainWindow):
         info = info.json()
         dialog = QtWidgets.QDialog()
         ViewDialog().setupUi(dialog)
-        browser: QTextBrowser = dialog.findChild(QTextBrowser, 'textBrowser')
+
+        document = Document()
+        channel = QWebChannel()
+        channel.registerObject("content", document)
+
+        view: QWebEngineView = QWebEngineView()
+        dialog.findChild(QtWidgets.QGridLayout, 'gridLayout_2').addWidget(view)
+        view.page().setWebChannel(channel)
+        view.setUrl(QUrl.fromLocalFile(os.path.join(os.path.dirname(__file__), 'web', 'index.html')))
+        document.set_text(info['body'])
+
+
         button: QToolButton = dialog.findChild(QToolButton, 'menuButton')
         button.clicked.connect(lambda: self.get_menu(True, item).popup(QCursor.pos()))
         label: QLabel = dialog.findChild(QLabel, 'label')
         label.setText(info['title'])
-        browser.anchorClicked.connect(open_link)
-        browser.setMarkdown(info['body'])
-        browser.setOpenLinks(False)
+
+        #browser: QTextBrowser = dialog.findChild(QTextBrowser, 'textBrowser')
+        # browser.anchorClicked.connect(open_link)
+        # browser.setMarkdown(info['body'])
+        # browser.setOpenLinks(False)
         dialog.exec()
 
     def open_settings(self):
@@ -278,20 +311,6 @@ class ModrinthBrowser(QMainWindow):
         self.list.setItem(count_, 7, QtWidgets.QTableWidgetItem(mod.author))
         self.list.setItem(count_, 8, QtWidgets.QTableWidgetItem(mod.project_id))
         self.status_progress.setValue(int(i / count * 100))
-
-    class GetJSON(QThread):
-        result = pyqtSignal(dict)
-
-        def __init__(self, url):
-            QtCore.QThread.__init__(self)
-            self.url = url
-
-        def run(self):
-            try:
-                r = requests.get(self.url)
-                self.result.emit(r.json())
-            except Exception as e:
-                self.text.emit({'error': str(e)})
 
     class DownloadFile(QThread):
 
