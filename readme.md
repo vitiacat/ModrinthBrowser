@@ -1,5 +1,5 @@
 ## ModrinthBrowser
-Программа для быстрой установки Minecraft модов с сайта [Modrinth](https://modrinth.com/)
+Программа для быстрой загрузки и установки Minecraft модов с сайта [Modrinth](https://modrinth.com/)
 
 Программа написана на PyQt5 за несколько дней :)
 
