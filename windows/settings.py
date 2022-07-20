@@ -15,7 +15,7 @@ class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
         Dialog.setWindowModality(QtCore.Qt.ApplicationModal)
-        Dialog.resize(593, 180)
+        Dialog.resize(593, 210)
         Dialog.setModal(True)
         self.gridLayout = QtWidgets.QGridLayout(Dialog)
         self.gridLayout.setObjectName("gridLayout")
@@ -32,6 +32,9 @@ class Ui_Dialog(object):
         self.minecraftPath.setReadOnly(True)
         self.minecraftPath.setObjectName("minecraftPath")
         self.verticalLayout.addWidget(self.minecraftPath)
+        self.minecraftPathVariants = QtWidgets.QComboBox(Dialog)
+        self.minecraftPathVariants.setObjectName("minecraftPathVariants")
+        self.verticalLayout.addWidget(self.minecraftPathVariants)
         self.horizontalLayout.addLayout(self.verticalLayout)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
         self.iconsInTable = QtWidgets.QCheckBox(Dialog)

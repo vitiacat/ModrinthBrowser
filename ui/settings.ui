@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>593</width>
-    <height>180</height>
+    <height>210</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -42,6 +42,9 @@
             <string>.minecraft</string>
            </property>
           </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="minecraftPathVariants"/>
          </item>
         </layout>
        </item>

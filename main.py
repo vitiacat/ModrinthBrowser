@@ -6,9 +6,11 @@ import grequests
 import requests
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QThread, QUrl, QTimer, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QMainWindow, QProgressBar, QTextBrowser, QLabel, QToolButton, QLineEdit
+from PyQt5.QtWidgets import QApplication, QMainWindow, QProgressBar, QTextBrowser, QLabel, QToolButton, QLineEdit, \
+    QComboBox, QCheckBox
 from PyQt5.QtGui import QIcon, QDesktopServices, QCursor
 
+import utils
 from settings import Settings
 from windows.main_window import Ui_MainWindow
 from windows.view import Ui_Dialog as ViewDialog
@@ -114,13 +116,22 @@ class ModrinthBrowser(QMainWindow):
         dialog = QtWidgets.QDialog()
         SettingsDialog().setupUi(dialog)
         minecraft_path: QLineEdit = dialog.findChild(QLineEdit, 'minecraftPath')
+        minecraft_path_variants: QComboBox = dialog.findChild(QComboBox, 'minecraftPathVariants')
         minecraft_path.setText(self.settings.minecraft_path)
         minecraft_path.mousePressEvent = lambda e: self.open_directory_dialog(minecraft_path, check_settings)
 
-        icons_in_table: QtWidgets.QCheckBox = dialog.findChild(QtWidgets.QCheckBox, 'iconsInTable')
+        paths = utils.find_mc_paths()
+        if len(paths) > 0:
+            minecraft_path_variants.addItems(paths)
+            minecraft_path_variants.setCurrentText(minecraft_path.text())
+            minecraft_path_variants.currentTextChanged.connect(minecraft_path.setText)
+        else:
+            minecraft_path_variants.setVisible(False)
+
+        icons_in_table: QCheckBox = dialog.findChild(QCheckBox, 'iconsInTable')
         icons_in_table.setChecked(self.settings.icons_in_table)
 
-        rows_count: QtWidgets.QComboBox = dialog.findChild(QtWidgets.QComboBox, 'rowsCount')
+        rows_count: QComboBox = dialog.findChild(QComboBox, 'rowsCount')
         rows_count.setCurrentText(str(self.settings.rows_count))
 
         def save_settings():
@@ -139,6 +150,7 @@ class ModrinthBrowser(QMainWindow):
         if not os.path.exists('settings.json'):
             button_box.setStandardButtons(QtWidgets.QDialogButtonBox.Save)
         button_box.accepted.connect(save_settings)
+        button_box.rejected.connect(dialog.reject)
         check_settings()
         dialog.exec()
 
