@@ -186,7 +186,6 @@ class ModrinthBrowser(QMainWindow):
         if not os.path.exists('settings.json'):
             button_box.setStandardButtons(QtWidgets.QDialogButtonBox.Save)
         button_box.accepted.connect(save_settings)
-        button_box.rejected.connect(dialog.reject)
         check_settings()
         dialog.exec()
 
