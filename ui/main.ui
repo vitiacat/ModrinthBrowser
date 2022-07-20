@@ -21,72 +21,97 @@
        <widget class="QLineEdit" name="searchBar"/>
       </item>
       <item>
-       <widget class="QTableWidget" name="list">
-        <property name="contextMenuPolicy">
-         <enum>Qt::CustomContextMenu</enum>
-        </property>
-        <property name="sizeAdjustPolicy">
-         <enum>QAbstractScrollArea::AdjustToContents</enum>
-        </property>
-        <property name="editTriggers">
-         <set>QAbstractItemView::NoEditTriggers</set>
-        </property>
-        <property name="selectionMode">
-         <enum>QAbstractItemView::SingleSelection</enum>
-        </property>
-        <property name="selectionBehavior">
-         <enum>QAbstractItemView::SelectRows</enum>
-        </property>
-        <column>
-         <property name="text">
-          <string>Иконка</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Название</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Версия</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Скачиваний</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Подписок</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Клиент</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Сервер</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Автор</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>ID</string>
-         </property>
-        </column>
-       </widget>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QComboBox" name="version">
+          <property name="currentText">
+           <string>Любая</string>
+          </property>
+          <item>
+           <property name="text">
+            <string>Любая</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="category">
+          <item>
+           <property name="text">
+            <string>Любая</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </item>
     <item row="1" column="0">
+     <widget class="QTableWidget" name="list">
+      <property name="contextMenuPolicy">
+       <enum>Qt::CustomContextMenu</enum>
+      </property>
+      <property name="sizeAdjustPolicy">
+       <enum>QAbstractScrollArea::AdjustToContents</enum>
+      </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::NoEditTriggers</set>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SingleSelection</enum>
+      </property>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectRows</enum>
+      </property>
+      <column>
+       <property name="text">
+        <string>Иконка</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Название</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Версия</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Скачиваний</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Подписок</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Клиент</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Сервер</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Автор</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>ID</string>
+       </property>
+      </column>
+     </widget>
+    </item>
+    <item row="2" column="0">
      <widget class="QSpinBox" name="page">
       <property name="suffix">
        <string> страница</string>

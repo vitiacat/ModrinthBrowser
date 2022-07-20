@@ -1,4 +1,5 @@
 import dataclasses
+import json
 import os.path
 import sys
 
@@ -47,6 +48,23 @@ def open_link(url):
     QDesktopServices.openUrl(QUrl(url))
 
 
+categories = {
+    "adventure": "Приключения",
+    "cursed": "Cursed",
+    "decoration": "Декоративные",
+    "equipment": "Экипировка",
+    "food": "Еда",
+    "library": "Библиотеки",
+    "magic": "Магия",
+    "misc": "Разное",
+    "optimization": "Оптимизация",
+    "storage": "Хранилища",
+    "technology": "Технологии",
+    "utility": "Утилиты",
+    "worldgen": "Генерация мира",
+}
+
+
 class ModrinthBrowser(QMainWindow):
 
     def get_menu(self, is_view, item):
@@ -59,9 +77,25 @@ class ModrinthBrowser(QMainWindow):
     def __init__(self):
         super(ModrinthBrowser, self).__init__()  # Call the inherited classes __init__ method
         Ui_MainWindow().setupUi(self)
+
+        self.statusBar().showMessage('Загрузка версий Minecraft...')
+        r = requests.get('https://launchermeta.mojang.com/mc/game/version_manifest.json')
+        self.mc_versions = r.json()
+        self.mc_versions = filter(lambda v: v['type'] == 'release', self.mc_versions['versions'])
+
         self.list: QtWidgets.QTableWidget = self.findChild(QtWidgets.QTableWidget, 'list')
         self.searchBar: QtWidgets.QLineEdit = self.findChild(QtWidgets.QLineEdit, 'searchBar')
         self.settings_button: QtWidgets.QAction = self.findChild(QtWidgets.QAction, 'settings')
+
+        self.version: QComboBox = self.findChild(QComboBox, 'version')
+        self.version.addItems(list(map(lambda v: v['id'], self.mc_versions)))
+        self.version.currentTextChanged.connect(lambda text: (self.searchTime.stop(), self.searchTime.start(350)))
+
+        self.category: QComboBox = self.findChild(QComboBox, 'category')
+        self.category.addItems(list(categories.values()))
+
+        self.category.currentTextChanged.connect(lambda text: (self.searchTime.stop(), self.searchTime.start(350)))
+
         self.settings_button.triggered.connect(self.open_settings)
 
         self.page: QtWidgets.QSpinBox = self.findChild(QtWidgets.QSpinBox, 'page')
@@ -77,7 +111,9 @@ class ModrinthBrowser(QMainWindow):
             self.list.horizontalHeader().setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeToContents)
         self.list.setIconSize(QtCore.QSize(32, 32))
         self.list.itemDoubleClicked.connect(self.open_mod)
-        self.list.customContextMenuRequested.connect(lambda: None if self.list.currentItem() is None else self.get_menu(False, self.list.currentItem()).popup(QCursor.pos()))
+        self.list.customContextMenuRequested.connect(
+            lambda: None if self.list.currentItem() is None else self.get_menu(False, self.list.currentItem()).popup(
+                QCursor.pos()))
         self.projects = []
 
         self.progress_dialog = None
@@ -169,7 +205,10 @@ class ModrinthBrowser(QMainWindow):
         DownloadDialog().setupUi(dialog)
         versions: QtWidgets.QTableWidget = dialog.findChild(QtWidgets.QTableWidget, 'versions')
         versions.cellDoubleClicked.connect(lambda row, _: self.download(info[row]['files'][0]['url'],
-                                                                        os.path.join(self.settings.minecraft_path, 'mods', info[row]['files'][0]['url'].split('/')[-1]),
+                                                                        os.path.join(self.settings.minecraft_path,
+                                                                                     'mods',
+                                                                                     info[row]['files'][0]['url'].split(
+                                                                                         '/')[-1]),
                                                                         lambda: dialog.close()))
         for i in range(versions.columnCount()):
             versions.horizontalHeader().setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
@@ -177,7 +216,9 @@ class ModrinthBrowser(QMainWindow):
             versions.insertRow(versions.rowCount())
             row = versions.rowCount() - 1
             versions.setItem(row, 0, QtWidgets.QTableWidgetItem(version['name']))
-            versions.setItem(row, 1, QtWidgets.QTableWidgetItem(version['game_versions'][0] if len(version['game_versions']) == 1 else (version['game_versions'][0] + ' - ' + version['game_versions'][-1]) ))
+            versions.setItem(row, 1, QtWidgets.QTableWidgetItem(
+                version['game_versions'][0] if len(version['game_versions']) == 1 else (
+                            version['game_versions'][0] + ' - ' + version['game_versions'][-1])))
             versions.setItem(row, 2, QtWidgets.QTableWidgetItem(version['version_type']))
             versions.setItem(row, 3, QtWidgets.QTableWidgetItem(format_int(version['downloads'])))
             versions.setItem(row, 4, QtWidgets.QTableWidgetItem(sizeof_fmt(version['files'][0]['size'])))
@@ -191,7 +232,9 @@ class ModrinthBrowser(QMainWindow):
         self.searchBar.setDisabled(True)
         self.page.setDisabled(True)
         text = self.searchBar.text()
-        self.t = self.Search(self.settings, page, text)
+        self.t = self.Search(self.settings, page, text, utils.create_facets(
+            None if self.version.currentIndex() == 0 else [self.version.currentText()],
+            None if self.category.currentIndex() == 0 else [list(categories.keys())[self.category.currentIndex() - 1]]))
         self.t.text.connect(self.statusBar().showMessage)
         self.t.result.connect(self.add_to_list)
         self.t.end.connect(self.search_end)
@@ -237,6 +280,20 @@ class ModrinthBrowser(QMainWindow):
         self.list.setItem(count_, 8, QtWidgets.QTableWidgetItem(mod.project_id))
         self.status_progress.setValue(int(i / count * 100))
 
+    class GetJSON(QThread):
+        result = pyqtSignal(dict)
+
+        def __init__(self, url):
+            QtCore.QThread.__init__(self)
+            self.url = url
+
+        def run(self):
+            try:
+                r = requests.get(self.url)
+                self.result.emit(r.json())
+            except Exception as e:
+                self.text.emit({'error': str(e)})
+
     class DownloadFile(QThread):
 
         progress = pyqtSignal(int, int)
@@ -269,22 +326,27 @@ class ModrinthBrowser(QMainWindow):
         end: pyqtSignal = pyqtSignal(int)
         query = None
 
-        def __init__(self, settings, page=1, query=None):
+        def __init__(self, settings, page=1, query=None, facets=None):
             QThread.__init__(self)
             self.settings = settings
             self.query = query
             self.page = page
+            self.facets = facets
 
         def run(self):
             self.text.emit('Получение списка модов...')
             response = requests.get('https://api.modrinth.com/v2/search?limit=' + str(self.settings.rows_count) +
                                     ('&query=' + self.query if self.query else '') +
-                                    '&offset=' + str((self.page - 1) * self.settings.rows_count))
+                                    '&offset=' + str((self.page - 1) * self.settings.rows_count) +
+                                    ('&facets=' + json.dumps(self.facets) if self.facets else ''))
             data = response.json()
             print(response.json())
             icons = []
             mods = []
             r = 1
+            if 'error' in data:
+                self.text.emit('Ошибка: ' + data['description'])
+                return
             for i in data['hits']:
                 path = 'cache/' + i['project_id']
                 if not os.path.exists(path) and self.settings.icons_in_table:
@@ -292,14 +354,15 @@ class ModrinthBrowser(QMainWindow):
                     if i['icon_url'] not in ['', 'null', None]:
                         print('Added icon: ' + i['icon_url'])
                         icons.append(i['icon_url'])
-                        #self.parent.download(i['icon_url'], 'cache/' + i['project_id'])
+                        # self.parent.download(i['icon_url'], 'cache/' + i['project_id'])
                         # response = requests.get(i['icon_url'])
                         # with open('cache/' + i['project_id'], 'wb') as f:
                         #     f.write(response.content)
                     else:
                         print('Invalid icon url: ' + i['icon_url'] + ' in project ' + i['project_id'])
-                mods.append(ModInfo(i['project_id'], i['title'], i['versions'], i['downloads'], i['follows'], i['author'],
-                                    i['client_side'], i['server_side']))
+                mods.append(
+                    ModInfo(i['project_id'], i['title'], i['versions'], i['downloads'], i['follows'], i['author'],
+                            i['client_side'], i['server_side']))
             self.text.emit('Скачивание иконок...')
             response = (grequests.get(url) for url in icons)
             response = grequests.map(response)

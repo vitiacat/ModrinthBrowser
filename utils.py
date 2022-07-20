@@ -2,7 +2,6 @@ import os
 
 
 def find_mc_paths():
-
     # minecraft
     paths = ['~/.minecraft', '~/Library/Application Support/minecraft', '%APPDATA%\.minecraft']
     exists = []
@@ -21,3 +20,14 @@ def find_mc_paths():
                     exists.append(os.path.join(a, dir))
 
     return exists
+
+
+def create_facets(versions, categories):
+    a = []
+    if versions is not None:
+        for version in versions:
+            a.append(["versions:" + version])
+    if categories is not None:
+        for category in categories:
+            a.append(["categories:" + category])
+    return a
