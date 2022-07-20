@@ -8,7 +8,7 @@ import requests
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QThread, QUrl, QTimer, pyqtSignal, QObject, pyqtProperty
 from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWidgets import QApplication, QMainWindow, QProgressBar, QTextBrowser, QLabel, QToolButton, QLineEdit, \
     QComboBox, QCheckBox
 from PyQt5.QtGui import QIcon, QDesktopServices, QCursor
@@ -153,8 +153,14 @@ class ModrinthBrowser(QMainWindow):
         self.search(self.page.value())
 
     def open_mod(self, item):
-        mod = self.projects[item.row()]
-        info = requests.get('https://api.modrinth.com/v2/project/' + mod.project_id)
+        if type(item) == QtWidgets.QTableWidgetItem:
+            mod = self.projects[item.row()]
+            project_id = mod.project_id
+        elif type(item) == str:
+            project_id = item
+        else:
+            return
+        info = requests.get('https://api.modrinth.com/v2/project/' + project_id)
         info = info.json()
         dialog = QtWidgets.QDialog()
         ViewDialog().setupUi(dialog)
@@ -167,18 +173,23 @@ class ModrinthBrowser(QMainWindow):
         dialog.findChild(QtWidgets.QGridLayout, 'gridLayout_2').addWidget(view)
         view.page().setWebChannel(channel)
         view.setUrl(QUrl.fromLocalFile(os.path.join(os.path.dirname(__file__), 'web', 'index.html')))
-        document.set_text(info['body'])
 
+        def check_url(url: QUrl):
+            if url.host() == 'modrinth.com':
+                if url.path().split('/')[1] == 'mod':
+                    # i dont know better way to cancel loading
+                    view.stop()
+                    view.back()
+                    self.open_mod(url.path().split('/')[2])
+
+        view.page().urlChanged.connect(check_url)
+        document.set_text(info['body'])
 
         button: QToolButton = dialog.findChild(QToolButton, 'menuButton')
         button.clicked.connect(lambda: self.get_menu(True, item).popup(QCursor.pos()))
         label: QLabel = dialog.findChild(QLabel, 'label')
         label.setText(info['title'])
 
-        #browser: QTextBrowser = dialog.findChild(QTextBrowser, 'textBrowser')
-        # browser.anchorClicked.connect(open_link)
-        # browser.setMarkdown(info['body'])
-        # browser.setOpenLinks(False)
         dialog.exec()
 
     def open_settings(self):
@@ -230,8 +241,14 @@ class ModrinthBrowser(QMainWindow):
                 callback()
 
     def open_mod_download(self, item):
-        mod = self.projects[item.row()]
-        info = requests.get('https://api.modrinth.com/v2/project/' + mod.project_id + '/version')
+        if type(item) == QtWidgets.QTableWidgetItem:
+            mod = self.projects[item.row()]
+            project_id = mod.project_id
+        elif type(item) == str:
+            project_id = item
+        else:
+            return
+        info = requests.get('https://api.modrinth.com/v2/project/' + project_id + '/version')
         info = info.json()
         dialog = QtWidgets.QDialog()
         DownloadDialog().setupUi(dialog)
