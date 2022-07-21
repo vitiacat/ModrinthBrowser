@@ -2,6 +2,7 @@ import dataclasses
 import json
 import os.path
 import sys
+import time
 
 import grequests
 import requests
@@ -10,7 +11,7 @@ from PyQt5.QtCore import QThread, QUrl, QTimer, pyqtSignal, QObject, pyqtPropert
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWidgets import QApplication, QMainWindow, QProgressBar, QTextBrowser, QLabel, QToolButton, QLineEdit, \
-    QComboBox, QCheckBox
+    QComboBox, QCheckBox, QDialogButtonBox
 from PyQt5.QtGui import QIcon, QDesktopServices, QCursor
 
 import utils
@@ -20,6 +21,8 @@ from windows.view import Ui_Dialog as ViewDialog
 from windows.download import Ui_Dialog as DownloadDialog
 from windows.progress import Ui_Dialog as ProgressDialog
 from windows.settings import Ui_Dialog as SettingsDialog
+from windows.create_pack import Ui_Dialog as CreatePackDialog
+from pack import Pack, PackMod, load_packs, save_packs, packs, create_pack
 
 
 @dataclasses.dataclass
@@ -85,6 +88,32 @@ class Document(QObject):
 
     text = pyqtProperty(str, fget=get_text, fset=set_text, notify=textChanged)
 
+class DownloadFile(QThread):
+
+    progress = pyqtSignal(int, int)
+    end = pyqtSignal()
+
+    def __init__(self, url, path):
+        super().__init__()
+        self.url = url
+        self.path = path
+
+    def run(self):
+        try:
+            r = requests.get(self.url, stream=True)
+            total_length = int(r.headers.get('content-length'))
+            i = 0
+            with open(self.path, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=4096):
+                    if chunk:
+                        f.write(chunk)
+                        i += len(chunk)
+                        self.progress.emit(i, total_length)
+            print('Downloaded:', self.path)
+        except Exception as e:
+            print(e)
+        self.end.emit()
+
 class ModrinthBrowser(QMainWindow):
 
     def get_menu(self, is_view, item):
@@ -106,24 +135,32 @@ class ModrinthBrowser(QMainWindow):
         self.list: QtWidgets.QTableWidget = self.findChild(QtWidgets.QTableWidget, 'list')
         self.searchBar: QtWidgets.QLineEdit = self.findChild(QtWidgets.QLineEdit, 'searchBar')
         self.settings_button: QtWidgets.QAction = self.findChild(QtWidgets.QAction, 'settings')
+        self.create_pack: QtWidgets.QAction = self.findChild(QtWidgets.QAction, 'createPack')
+        self.create_pack.triggered.connect(self.open_create_pack)
+        self.packs_menu = self.findChild(QtWidgets.QMenu, 'packsMenu')
+        self.packs_actions = []
 
         self.version: QComboBox = self.findChild(QComboBox, 'version')
         self.version.addItems(list(map(lambda v: v['id'], self.mc_versions)))
-        self.version.currentTextChanged.connect(lambda text: (self.searchTime.stop(), self.searchTime.start(350)))
+        self.version.currentTextChanged.connect(lambda text: (self.page.setValue(0), self.searchTime.stop(), self.searchTime.start(350)))
 
         self.category: QComboBox = self.findChild(QComboBox, 'category')
         self.category.addItems(list(categories.values()))
 
-        self.category.currentTextChanged.connect(lambda text: (self.searchTime.stop(), self.searchTime.start(350)))
+        self.category.currentTextChanged.connect(lambda text: (self.page.setValue(0), self.searchTime.stop(), self.searchTime.start(350)))
 
         self.settings_button.triggered.connect(self.open_settings)
 
         self.page: QtWidgets.QSpinBox = self.findChild(QtWidgets.QSpinBox, 'page')
+        self.minusPage: QToolButton = self.findChild(QToolButton, 'minusPage')
+        self.plusPage: QToolButton = self.findChild(QToolButton, 'plusPage')
+        self.minusPage.clicked.connect(lambda: self.page.setValue(self.page.value() - 1))
+        self.plusPage.clicked.connect(lambda: self.page.setValue(self.page.value() + 1))
 
         self.searchTime = QTimer(self)
         self.searchTime.timeout.connect(lambda: self.search(self.page.value()))
         self.searchTime.setSingleShot(True)
-        self.searchBar.textEdited.connect(lambda: (self.searchTime.stop(), self.searchTime.start(800)))
+        self.searchBar.textEdited.connect(lambda: (self.page.setValue(0), self.searchTime.stop(), self.searchTime.start(800)))
         self.page.valueChanged.connect(lambda: (self.searchTime.stop(), self.searchTime.start(500)))
 
         # strech the columns
@@ -148,8 +185,13 @@ class ModrinthBrowser(QMainWindow):
             self.open_settings()
         else:
             self.settings.load()
+        if not os.path.exists('packs.json'):
+            save_packs()
+        else:
+            load_packs()
         os.mkdir('cache') if not os.path.exists('cache') else None
 
+        self.update_packs()
         self.search(self.page.value())
 
     def open_mod(self, item):
@@ -183,6 +225,7 @@ class ModrinthBrowser(QMainWindow):
                     self.open_mod(url.path().split('/')[2])
 
         view.page().urlChanged.connect(check_url)
+        view.page().setZoomFactor(0.85)
         document.set_text(info['body'])
 
         button: QToolButton = dialog.findChild(QToolButton, 'menuButton')
@@ -267,11 +310,31 @@ class ModrinthBrowser(QMainWindow):
             versions.setItem(row, 0, QtWidgets.QTableWidgetItem(version['name']))
             versions.setItem(row, 1, QtWidgets.QTableWidgetItem(
                 version['game_versions'][0] if len(version['game_versions']) == 1 else (
-                            version['game_versions'][0] + ' - ' + version['game_versions'][-1])))
+                        version['game_versions'][0] + ' - ' + version['game_versions'][-1])))
             versions.setItem(row, 2, QtWidgets.QTableWidgetItem(version['version_type']))
             versions.setItem(row, 3, QtWidgets.QTableWidgetItem(format_int(version['downloads'])))
             versions.setItem(row, 4, QtWidgets.QTableWidgetItem(sizeof_fmt(version['files'][0]['size'])))
         dialog.exec()
+
+    def open_create_pack(self):
+        dialog = QtWidgets.QDialog()
+        CreatePackDialog().setupUi(dialog)
+        dialog_box: QDialogButtonBox = dialog.findChild(QDialogButtonBox, 'buttonBox')
+        name: QLineEdit = dialog.findChild(QLineEdit, 'name')
+        ok = dialog_box.button(QDialogButtonBox.Ok)
+        ok.setEnabled(False)
+        name.textChanged.connect(lambda: ok.setEnabled(name.text() != ''))
+        dialog_box.accepted.connect(lambda: (create_pack(name.text()), self.update_packs()))
+        dialog.exec()
+
+    def update_packs(self):
+        for a in self.packs_actions:
+            a.deleteLater()
+        self.packs_actions.clear()
+        for pack in packs:
+            a = self.packs_menu.addAction(pack.name)
+            a.triggered.connect(lambda: self.open_pack(pack['name']))
+            self.packs_actions.append(a)
 
     def search(self, page):
         self.statusBar().show()
@@ -280,6 +343,9 @@ class ModrinthBrowser(QMainWindow):
         self.projects = []
         self.searchBar.setDisabled(True)
         self.page.setDisabled(True)
+        self.version.setDisabled(True)
+        self.category.setDisabled(True)
+
         text = self.searchBar.text()
         self.t = self.Search(self.settings, page, text, utils.create_facets(
             None if self.version.currentIndex() == 0 else [self.version.currentText()],
@@ -294,7 +360,7 @@ class ModrinthBrowser(QMainWindow):
         ProgressDialog().setupUi(self.progress_dialog)
         self.progress_dialog.setWindowFlag(QtCore.Qt.CustomizeWindowHint, True)
         self.progress_dialog.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
-        self.t = self.DownloadFile(url, path)
+        self.t = DownloadFile(url, path)
         p = self.progress_dialog.findChild(QtWidgets.QProgressBar, 'progressBar')
         label = self.progress_dialog.findChild(QtWidgets.QLabel, 'progressLabel')
         self.t.progress.connect(lambda x, total: (p.setValue(int(x / total * 100)),
@@ -306,6 +372,8 @@ class ModrinthBrowser(QMainWindow):
     def search_end(self, total):
         self.statusBar().hide()
         self.searchBar.setDisabled(False)
+        self.version.setDisabled(False)
+        self.category.setDisabled(False)
         self.page.setDisabled(False)
         self.page.setMaximum(total // self.settings.rows_count + 1)
         self.page.setSuffix(f' страница / {self.page.maximum()} стр.')
@@ -328,31 +396,6 @@ class ModrinthBrowser(QMainWindow):
         self.list.setItem(count_, 7, QtWidgets.QTableWidgetItem(mod.author))
         self.list.setItem(count_, 8, QtWidgets.QTableWidgetItem(mod.project_id))
         self.status_progress.setValue(int(i / count * 100))
-
-    class DownloadFile(QThread):
-
-        progress = pyqtSignal(int, int)
-        end = pyqtSignal()
-
-        def __init__(self, url, path):
-            super(ModrinthBrowser.DownloadFile, self).__init__()
-            self.url = url
-            self.path = path
-
-        def run(self):
-            try:
-                r = requests.get(self.url, stream=True)
-                total_length = int(r.headers.get('content-length'))
-                i = 0
-                with open(self.path, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=4096):
-                        if chunk:
-                            f.write(chunk)
-                            i += len(chunk)
-                            self.progress.emit(i, total_length)
-            except Exception as e:
-                print(e)
-            self.end.emit()
 
     class Search(QThread):
 
@@ -399,17 +442,23 @@ class ModrinthBrowser(QMainWindow):
                     ModInfo(i['project_id'], i['title'], i['versions'], i['downloads'], i['follows'], i['author'],
                             i['client_side'], i['server_side']))
             self.text.emit('Скачивание иконок...')
-            response = (grequests.get(url) for url in icons)
-            response = grequests.map(response)
-            for resp in response:
-                if resp is not None:
-                    with open(os.path.join('cache', resp.url.split('/')[-2]), 'wb') as f:
-                        f.write(resp.content)
-                        print('Downloaded icon: ' + resp.url)
+
+            threads = []
+            for i in icons:
+                thread = DownloadFile(i, 'cache/' + i.split('/')[-2])
+                threads.append(thread)
+                thread.start()
+                time.sleep(0.1)
+
+            for thread in threads:
+                thread.wait()
+
             self.text.emit('')
+
             for mod in mods:
                 self.result.emit(mod, r, len(data['hits']))
                 r += 1
+
             self.end.emit(data['total_hits'])
 
 

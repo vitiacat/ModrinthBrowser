@@ -15,7 +15,7 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
+    <item row="0" column="0" colspan="2">
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
        <widget class="QLineEdit" name="searchBar"/>
@@ -47,7 +47,7 @@
       </item>
      </layout>
     </item>
-    <item row="1" column="0">
+    <item row="1" column="0" colspan="2">
      <widget class="QTableWidget" name="list">
       <property name="contextMenuPolicy">
        <enum>Qt::CustomContextMenu</enum>
@@ -113,6 +113,33 @@
     </item>
     <item row="2" column="0">
      <widget class="QSpinBox" name="page">
+      <property name="minimumSize">
+       <size>
+        <width>1085</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="wrapping">
+       <bool>false</bool>
+      </property>
+      <property name="frame">
+       <bool>true</bool>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
+      </property>
+      <property name="accelerated">
+       <bool>false</bool>
+      </property>
+      <property name="correctionMode">
+       <enum>QAbstractSpinBox::CorrectToPreviousValue</enum>
+      </property>
+      <property name="showGroupSeparator" stdset="0">
+       <bool>false</bool>
+      </property>
       <property name="suffix">
        <string> страница</string>
       </property>
@@ -126,6 +153,24 @@
        <enum>QAbstractSpinBox::DefaultStepType</enum>
       </property>
      </widget>
+    </item>
+    <item row="2" column="1">
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QToolButton" name="minusPage">
+        <property name="text">
+         <string>&lt;--</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="plusPage">
+        <property name="text">
+         <string>--&gt;</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -147,7 +192,15 @@
     </property>
     <addaction name="settings"/>
    </widget>
+   <widget class="QMenu" name="packsMenu">
+    <property name="title">
+     <string>Сборки</string>
+    </property>
+    <addaction name="createPack"/>
+    <addaction name="separator"/>
+   </widget>
    <addaction name="program"/>
+   <addaction name="packsMenu"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionfrf">
@@ -183,6 +236,11 @@
   <action name="action100">
    <property name="text">
     <string>100</string>
+   </property>
+  </action>
+  <action name="createPack">
+   <property name="text">
+    <string>Создать</string>
    </property>
   </action>
  </widget>
