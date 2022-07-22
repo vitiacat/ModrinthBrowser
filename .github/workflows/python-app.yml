@@ -31,11 +31,11 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Build
       run: |
-        pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py windows/view.py --noconsole --clean --onefile
+        pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py windows/view.py --noconsole --clean --onefile --name ModrinthBrowser
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: main
+        name: ModrinthBrowser
         path: dist/
   build-windows:
 
@@ -55,11 +55,11 @@ jobs:
         pip install -r requirements.txt
     - name: Build
       run: |
-        pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py windows/view.py --noconsole --clean --onefile
+        pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py windows/view.py --noconsole --clean --onefile --name ModrinthBrowser
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: main.exe
+        name: ModrinthBrowser.exe
         path: dist/
   release_assets:
     name: Release assets
@@ -73,8 +73,8 @@ jobs:
           - os: ubuntu-latest
           - os: windows-latest
         names:
-          - name: main
-          - name: main.exe
+          - name: ModrinthBrowser
+          - name: ModrinthBrowser.exe
     steps:
       - name: Checkout code
         uses: actions/checkout@v1
