@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>593</width>
-    <height>210</height>
+    <height>314</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -87,6 +87,53 @@
        <item>
         <property name="text">
          <string>100</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Загрузчик (влияет на показ файлов для загруки)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="loaderType">
+       <item>
+        <property name="text">
+         <string>Любой</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Fabric</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Forge</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Quilt</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Язык</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="language">
+       <item>
+        <property name="text">
+         <string>Русский</string>
         </property>
        </item>
       </widget>

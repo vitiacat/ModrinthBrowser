@@ -11,7 +11,7 @@ from PyQt5.QtCore import QThread, QUrl, QTimer, pyqtSignal, QObject, pyqtPropert
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWidgets import QApplication, QMainWindow, QProgressBar, QTextBrowser, QLabel, QToolButton, QLineEdit, \
-    QComboBox, QCheckBox, QDialogButtonBox
+    QComboBox, QCheckBox, QDialogButtonBox, QPushButton, QMessageBox
 from PyQt5.QtGui import QIcon, QDesktopServices, QCursor
 
 import utils
@@ -22,7 +22,8 @@ from windows.download import Ui_Dialog as DownloadDialog
 from windows.progress import Ui_Dialog as ProgressDialog
 from windows.settings import Ui_Dialog as SettingsDialog
 from windows.create_pack import Ui_Dialog as CreatePackDialog
-from pack import Pack, PackMod, load_packs, save_packs, packs, create_pack
+from windows.pack_view import Ui_Dialog as PackViewDialog
+from pack import load_packs, save_packs, packs, create_pack, delete_pack, rename_pack, PackMod
 
 
 @dataclasses.dataclass
@@ -88,8 +89,8 @@ class Document(QObject):
 
     text = pyqtProperty(str, fget=get_text, fset=set_text, notify=textChanged)
 
-class DownloadFile(QThread):
 
+class DownloadFile(QThread):
     progress = pyqtSignal(int, int)
     end = pyqtSignal()
 
@@ -114,6 +115,7 @@ class DownloadFile(QThread):
             print(e)
         self.end.emit()
 
+
 class ModrinthBrowser(QMainWindow):
 
     def get_menu(self, is_view, item):
@@ -121,6 +123,9 @@ class ModrinthBrowser(QMainWindow):
         if not is_view:
             main_menu.addAction('Открыть', lambda: self.open_mod(item))
         main_menu.addAction('Загрузить', lambda: self.open_mod_download(item))
+        a = main_menu.addMenu('Добавить в сборку')
+        for pack in packs:
+            a.addAction(pack.name, lambda: self.add_mod_to_pack(item, pack))
         return main_menu
 
     def __init__(self):
@@ -130,7 +135,7 @@ class ModrinthBrowser(QMainWindow):
         self.statusBar().showMessage('Загрузка версий Minecraft...')
         r = requests.get('https://launchermeta.mojang.com/mc/game/version_manifest.json')
         self.mc_versions = r.json()
-        self.mc_versions = filter(lambda v: v['type'] == 'release', self.mc_versions['versions'])
+        self.mc_versions = list(filter(lambda v: v['type'] == 'release', self.mc_versions['versions']))
 
         self.list: QtWidgets.QTableWidget = self.findChild(QtWidgets.QTableWidget, 'list')
         self.searchBar: QtWidgets.QLineEdit = self.findChild(QtWidgets.QLineEdit, 'searchBar')
@@ -141,13 +146,14 @@ class ModrinthBrowser(QMainWindow):
         self.packs_actions = []
 
         self.version: QComboBox = self.findChild(QComboBox, 'version')
-        self.version.addItems(list(map(lambda v: v['id'], self.mc_versions)))
-        self.version.currentTextChanged.connect(lambda text: (self.page.setValue(0), self.searchTime.stop(), self.searchTime.start(350)))
-
+        self.version.addItems(list(map(lambda v: v['id'], self.mc_versions.copy())))
+        self.version.currentTextChanged.connect(
+            lambda text: (self.page.setValue(0), self.searchTime.stop(), self.searchTime.start(350)))
         self.category: QComboBox = self.findChild(QComboBox, 'category')
         self.category.addItems(list(categories.values()))
 
-        self.category.currentTextChanged.connect(lambda text: (self.page.setValue(0), self.searchTime.stop(), self.searchTime.start(350)))
+        self.category.currentTextChanged.connect(
+            lambda text: (self.page.setValue(0), self.searchTime.stop(), self.searchTime.start(350)))
 
         self.settings_button.triggered.connect(self.open_settings)
 
@@ -160,7 +166,8 @@ class ModrinthBrowser(QMainWindow):
         self.searchTime = QTimer(self)
         self.searchTime.timeout.connect(lambda: self.search(self.page.value()))
         self.searchTime.setSingleShot(True)
-        self.searchBar.textEdited.connect(lambda: (self.page.setValue(0), self.searchTime.stop(), self.searchTime.start(800)))
+        self.searchBar.textEdited.connect(
+            lambda: (self.page.setValue(0), self.searchTime.stop(), self.searchTime.start(800)))
         self.page.valueChanged.connect(lambda: (self.searchTime.stop(), self.searchTime.start(500)))
 
         # strech the columns
@@ -257,10 +264,23 @@ class ModrinthBrowser(QMainWindow):
         rows_count: QComboBox = dialog.findChild(QComboBox, 'rowsCount')
         rows_count.setCurrentText(str(self.settings.rows_count))
 
+        loader_type: QComboBox = dialog.findChild(QComboBox, 'loaderType')
+        if self.settings.loader_type is not None:
+            loader_type.setCurrentText(self.settings.loader_type.capitalize())
+
+        #language: QComboBox = dialog.findChild(QComboBox, 'language')
+        #language.setCurrentText(self.settings.language)
+
         def save_settings():
+            if not os.path.exists(os.path.join(minecraft_path.text(), 'mods')):
+                os.mkdir(os.path.join(minecraft_path.text(), 'mods'))
+
             self.settings.minecraft_path = minecraft_path.text()
             self.settings.icons_in_table = icons_in_table.isChecked()
             self.settings.rows_count = int(rows_count.currentText())
+            self.settings.loader_type = loader_type.currentText().lower() if loader_type.currentIndex() != 0 else None
+            #self.settings.language = language.currentText()
+
             self.settings.save()
 
         def check_settings():
@@ -291,16 +311,14 @@ class ModrinthBrowser(QMainWindow):
             project_id = item
         else:
             return
-        info = requests.get('https://api.modrinth.com/v2/project/' + project_id + '/version')
+        info = requests.get('https://api.modrinth.com/v2/project/' + project_id + '/version',
+                            params={'loaders': json.dumps([self.settings.loader_type])})
         info = info.json()
         dialog = QtWidgets.QDialog()
         DownloadDialog().setupUi(dialog)
         versions: QtWidgets.QTableWidget = dialog.findChild(QtWidgets.QTableWidget, 'versions')
         versions.cellDoubleClicked.connect(lambda row, _: self.download(info[row]['files'][0]['url'],
-                                                                        os.path.join(self.settings.minecraft_path,
-                                                                                     'mods',
-                                                                                     info[row]['files'][0]['url'].split(
-                                                                                         '/')[-1]),
+                                                                        os.path.join(self.settings.minecraft_path, 'mods', info[row]['files'][0]['url'].split('/')[-1]),
                                                                         lambda: dialog.close()))
         for i in range(versions.columnCount()):
             versions.horizontalHeader().setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
@@ -312,9 +330,14 @@ class ModrinthBrowser(QMainWindow):
                 version['game_versions'][0] if len(version['game_versions']) == 1 else (
                         version['game_versions'][0] + ' - ' + version['game_versions'][-1])))
             versions.setItem(row, 2, QtWidgets.QTableWidgetItem(version['version_type']))
-            versions.setItem(row, 3, QtWidgets.QTableWidgetItem(format_int(version['downloads'])))
-            versions.setItem(row, 4, QtWidgets.QTableWidgetItem(sizeof_fmt(version['files'][0]['size'])))
-        dialog.exec()
+            versions.setItem(row, 3, QtWidgets.QTableWidgetItem(', '.join(version['loaders'])))
+            versions.setItem(row, 4, QtWidgets.QTableWidgetItem(format_int(version['downloads'])))
+            versions.setItem(row, 5, QtWidgets.QTableWidgetItem(sizeof_fmt(version['files'][0]['size'])))
+
+        if versions.rowCount() == 0:
+            QMessageBox.information(self, 'Ничего не найдено :(', 'Не удалось найти версии.' + '\nПроверьте настройку \"Загрузчик\", возможно, данная модификация не поддерживает данный загрузчик.' if self.settings.loader_type is not None else '')
+        else:
+            dialog.exec()
 
     def open_create_pack(self):
         dialog = QtWidgets.QDialog()
@@ -327,13 +350,114 @@ class ModrinthBrowser(QMainWindow):
         dialog_box.accepted.connect(lambda: (create_pack(name.text()), self.update_packs()))
         dialog.exec()
 
+    def open_pack(self, name):
+        pack = list(filter(lambda x: x.name == name, packs))[0]
+        dialog = QtWidgets.QDialog()
+        PackViewDialog().setupUi(dialog)
+        dialog.setWindowTitle(f'Сборка: {pack.name} ({len(pack.mods)} модов)')
+        mods: QtWidgets.QListWidget = dialog.findChild(QtWidgets.QListWidget, 'mods')
+
+        def delete():
+            if QtWidgets.QMessageBox.question(self, 'Удаление сборки',
+                                              f'Вы действительно хотите удалить сборку {pack.name}?',
+                                              QtWidgets.QMessageBox.Yes,
+                                              QtWidgets.QMessageBox.No) == QtWidgets.QMessageBox.Yes:
+                delete_pack(name)
+                self.update_packs()
+                dialog.close()
+
+        def rename():
+            rename_dialog = QtWidgets.QDialog()
+            CreatePackDialog().setupUi(rename_dialog)
+            rename_dialog.setWindowTitle('Переименовать сборку')
+            new_name: QLineEdit = rename_dialog.findChild(QLineEdit, 'name')
+            new_name.setText(pack.name)
+            dialog_box: QDialogButtonBox = rename_dialog.findChild(QDialogButtonBox, 'buttonBox')
+            new_name.textChanged.connect(lambda: dialog_box.button(QDialogButtonBox.Ok)
+                                         .setEnabled(new_name.text() != ''))
+            dialog_box.accepted.connect(lambda: (
+                rename_pack(pack.name, new_name.text()), self.update_packs(), rename_dialog.close(), dialog.close(),
+                self.open_pack(new_name.text())))
+            rename_dialog.exec()
+
+        def delete_mod():
+            pack.delete_mod(mods.currentItem().data(QtCore.Qt.UserRole))
+            mods.takeItem(mods.currentRow())
+            save_packs()
+
+        def download_mods(version_name, loader_type):
+            if QtWidgets.QMessageBox.question(self, 'Скачивание модов',
+                                              f'Сейчас будут загружены моды для версии {loader_type} Minecraft {version_name}'
+                                              f'\nПродолжить?',
+                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No) != QtWidgets.QMessageBox.Yes:
+                return
+
+            dialog.setDisabled(True)
+            self.statusBar().showMessage('Получение версий модов...')
+            urls = []
+            for mod in pack.mods:
+                info = requests.get('https://api.modrinth.com/v2/project/' + mod['project_id'] + '/version')
+                info = info.json()
+                found = False
+                for version_info in info:
+                    if version_name in version_info['game_versions']:
+                        urls.append((version_info['files'][0]['url'], version_info['files'][0]['filename']))
+                        found = True
+                        break
+                if not found:
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Critical)
+                    msg.setText(f'Модификация {mod["name"]} не содержит версии, которые поддерживают версию Minecraft {version_name}')
+                    msg.setWindowTitle('Ошибка')
+                    msg.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ignore)
+                    if msg.exec() == QMessageBox.Cancel:
+                        dialog.setDisabled(False)
+                        self.statusBar().showMessage('')
+                        return
+            self.statusBar().showMessage('Скачивание модов...')
+            for url, filename in urls:
+                self.download(url, os.path.join(self.settings.minecraft_path, 'mods', filename))
+            self.statusBar().showMessage('Модификации успешно скачаны', 5000)
+            QMessageBox.information(self, 'Скачивание модов', 'Модификации успешно скачаны')
+            dialog.setDisabled(False)
+
+        menu = QtWidgets.QMenu()
+        menu.addAction('Удалить', delete_mod)
+        versions_menu = QtWidgets.QMenu()
+        for version in list(map(lambda v: v['id'], self.mc_versions)):
+            sub_menu = versions_menu.addMenu(version)
+            for loader_type in ['Fabric', 'Forge', 'Quilt']:
+                sub_menu.addAction(loader_type, lambda v=version, l=loader_type: download_mods(v, l))
+
+        delete_pack_button: QPushButton = dialog.findChild(QPushButton, 'deletePack')
+        delete_pack_button.clicked.connect(delete)
+        rename_pack_button: QPushButton = dialog.findChild(QPushButton, 'renamePack')
+        rename_pack_button.clicked.connect(rename)
+        download_mods_button: QPushButton = dialog.findChild(QPushButton, 'downloadMods')
+        download_mods_button.clicked.connect(lambda: versions_menu.popup(QCursor.pos()))
+        download_mods_button.setEnabled(len(pack.mods) > 0)
+
+        mods.itemDoubleClicked.connect(lambda item: self.open_mod(mods.currentItem().data(QtCore.Qt.UserRole)))
+        mods.customContextMenuRequested.connect(lambda: menu.popup(QCursor.pos()) if mods.currentItem() else None)
+
+        for mod in pack.mods:
+            a = QtWidgets.QListWidgetItem(mod['name'])
+            a.setData(QtCore.Qt.UserRole, mod['project_id'])
+            mods.addItem(a)
+        dialog.exec()
+
+    def add_mod_to_pack(self, item, pack):
+        mod = self.projects[item.row()]
+        pack.add_mod(PackMod(mod.project_id, mod.title))
+        save_packs()
+
     def update_packs(self):
         for a in self.packs_actions:
             a.deleteLater()
         self.packs_actions.clear()
         for pack in packs:
             a = self.packs_menu.addAction(pack.name)
-            a.triggered.connect(lambda: self.open_pack(pack['name']))
+            a.triggered.connect(lambda b, p=pack: self.open_pack(p.name))
             self.packs_actions.append(a)
 
     def search(self, page):

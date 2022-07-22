@@ -45,6 +45,11 @@
      </column>
      <column>
       <property name="text">
+       <string>Загрузчик</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
        <string>Скачиваний</string>
       </property>
      </column>

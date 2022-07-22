@@ -9,11 +9,18 @@ class Pack:
     def add_mod(self, mod):
         self.mods.append(mod.__dict__)
 
+    def delete_mod(self, project_id):
+        for mod in self.mods:
+            if mod['project_id'] == project_id:
+                self.mods.remove(mod)
+                return True
+        return False
 
 class PackMod:
     def __init__(self, project_id, name):
         self.project_id = project_id
         self.name = name
+
 
 packs = []
 
@@ -42,3 +49,21 @@ def create_pack(name):
     packs.append(p)
     save_packs()
     return p
+
+
+def delete_pack(name):
+    for pack in packs:
+        if pack.name == name:
+            packs.remove(pack)
+            save_packs()
+            return
+    raise Exception('Pack not found')
+
+
+def rename_pack(name, new_name):
+    for pack in packs:
+        if pack.name == name:
+            pack.name = new_name
+            save_packs()
+            return
+    raise Exception('Pack not found')

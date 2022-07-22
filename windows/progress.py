@@ -14,13 +14,18 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
+        Dialog.setWindowModality(QtCore.Qt.WindowModal)
         Dialog.resize(320, 67)
+        Dialog.setWindowOpacity(1.0)
+        Dialog.setSizeGripEnabled(False)
+        Dialog.setModal(True)
+        self.gridLayout = QtWidgets.QGridLayout(Dialog)
+        self.gridLayout.setObjectName("gridLayout")
         self.progressBar = QtWidgets.QProgressBar(Dialog)
-        self.progressBar.setGeometry(QtCore.QRect(10, 10, 301, 23))
         self.progressBar.setProperty("value", 0)
         self.progressBar.setObjectName("progressBar")
+        self.gridLayout.addWidget(self.progressBar, 0, 0, 1, 1)
         self.progressLabel = QtWidgets.QLabel(Dialog)
-        self.progressLabel.setGeometry(QtCore.QRect(10, 40, 291, 16))
         font = QtGui.QFont()
         font.setFamily("DejaVu Sans Mono")
         font.setBold(True)
@@ -28,11 +33,12 @@ class Ui_Dialog(object):
         font.setWeight(75)
         self.progressLabel.setFont(font)
         self.progressLabel.setObjectName("progressLabel")
+        self.gridLayout.addWidget(self.progressLabel, 1, 0, 1, 1)
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+        Dialog.setWindowTitle(_translate("Dialog", "Загрузка..."))
         self.progressLabel.setText(_translate("Dialog", "? / ?"))
