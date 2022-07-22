@@ -94,7 +94,7 @@
      <item>
       <widget class="QLabel" name="label_3">
        <property name="text">
-        <string>Загрузчик (влияет на показ файлов для загруки)</string>
+        <string>Загрузчик (влияет на показ файлов для загрузки)</string>
        </property>
       </widget>
      </item>
@@ -130,13 +130,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="language">
-       <item>
-        <property name="text">
-         <string>Русский</string>
-        </property>
-       </item>
-      </widget>
+      <widget class="QComboBox" name="language"/>
      </item>
      <item>
       <widget class="QDialogButtonBox" name="buttonBox">

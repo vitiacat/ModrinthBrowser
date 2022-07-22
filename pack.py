@@ -16,6 +16,7 @@ class Pack:
                 return True
         return False
 
+
 class PackMod:
     def __init__(self, project_id, name):
         self.project_id = project_id
@@ -27,6 +28,7 @@ packs = []
 
 def load_packs():
     global packs
+    packs.clear()
     with open('packs.json', 'r') as f:
         packs_ = json.load(f)
     for pack in packs_:

@@ -8,7 +8,7 @@ class Settings:
         self.minecraft_path = ''
         self.rows_count = 20
         self.loader_type = None
-        self.language = 'ru'
+        self.language = 'en'
 
     def load(self):
         with open('settings.json', 'r') as f:
@@ -17,7 +17,7 @@ class Settings:
             self.icons_in_table = data.get('icons_in_table', True)
             self.rows_count = data.get('rows_count', 20)
             self.loader_type = data.get('loader_type', None)
-            self.language = data.get('language', 'ru')
+            self.language = data.get('language', 'en')
 
     def save(self):
         with open('settings.json', 'w') as f:
