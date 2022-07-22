@@ -3,14 +3,14 @@
  <class>Dialog</class>
  <widget class="QDialog" name="Dialog">
   <property name="windowModality">
-   <enum>Qt::WindowModal</enum>
+   <enum>Qt::NonModal</enum>
   </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>320</width>
-    <height>67</height>
+    <height>65</height>
    </rect>
   </property>
   <property name="windowTitle">

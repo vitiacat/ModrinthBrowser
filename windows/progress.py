@@ -14,8 +14,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.setWindowModality(QtCore.Qt.WindowModal)
-        Dialog.resize(320, 67)
+        Dialog.setWindowModality(QtCore.Qt.NonModal)
+        Dialog.resize(320, 65)
         Dialog.setWindowOpacity(1.0)
         Dialog.setSizeGripEnabled(False)
         Dialog.setModal(True)

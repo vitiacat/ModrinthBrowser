@@ -385,14 +385,16 @@ class ModrinthBrowser(QMainWindow):
             mods.takeItem(mods.currentRow())
             save_packs()
 
-        def download_mods(version_name, loader_type):
+        def download_mods(version_name, loader_name):
+            dialog.setCursor(QtCore.Qt.WaitCursor)
             if QtWidgets.QMessageBox.question(self, 'Скачивание модов',
-                                              f'Сейчас будут загружены моды для версии {loader_type} Minecraft {version_name}'
+                                              f'Сейчас будут загружены моды для версии {loader_name} Minecraft {version_name}'
                                               f'\nПродолжить?',
                                               QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No) != QtWidgets.QMessageBox.Yes:
+                dialog.setCursor(QtCore.Qt.ArrowCursor)
+                dialog.setDisabled(False)
                 return
 
-            dialog.setDisabled(True)
             self.statusBar().showMessage('Получение версий модов...')
             urls = []
             for mod in pack.mods:
@@ -400,18 +402,19 @@ class ModrinthBrowser(QMainWindow):
                 info = info.json()
                 found = False
                 for version_info in info:
-                    if version_name in version_info['game_versions']:
+                    if version_name in version_info['game_versions'] and loader_name.lower() in version_info['loaders']:
                         urls.append((version_info['files'][0]['url'], version_info['files'][0]['filename']))
                         found = True
                         break
                 if not found:
                     msg = QMessageBox()
                     msg.setIcon(QMessageBox.Critical)
-                    msg.setText(f'Модификация {mod["name"]} не содержит версии, которые поддерживают версию Minecraft {version_name}')
+                    msg.setText(f'Модификация {mod["name"]} не содержит версии, которые поддерживают версию {loader_name} Minecraft {version_name}')
                     msg.setWindowTitle('Ошибка')
                     msg.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ignore)
                     if msg.exec() == QMessageBox.Cancel:
                         dialog.setDisabled(False)
+                        dialog.setCursor(QtCore.Qt.ArrowCursor)
                         self.statusBar().showMessage('')
                         return
             self.statusBar().showMessage('Скачивание модов...')
@@ -420,6 +423,7 @@ class ModrinthBrowser(QMainWindow):
             self.statusBar().showMessage('Модификации успешно скачаны', 5000)
             QMessageBox.information(self, 'Скачивание модов', 'Модификации успешно скачаны')
             dialog.setDisabled(False)
+            dialog.setCursor(QtCore.Qt.ArrowCursor)
 
         menu = QtWidgets.QMenu()
         menu.addAction('Удалить', delete_mod)
