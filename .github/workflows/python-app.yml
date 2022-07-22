@@ -31,7 +31,7 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Build
       run: |
-        pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py  windows/view.py --clean --onefile
+        pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py windows/view.py --noconsole --clean --onefile
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
@@ -55,7 +55,7 @@ jobs:
         pip install -r requirements.txt
     - name: Build
       run: |
-        pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py  windows/view.py --clean --onefile
+        pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py windows/view.py --noconsole --clean --onefile
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
@@ -72,6 +72,7 @@ jobs:
         config:
           - os: ubuntu-latest
           - os: windows-latest
+        names:
           - name: main
           - name: main.exe
     steps:
@@ -80,4 +81,4 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ matrix.config.name }}
+          name: ${{ matrix.names.name }}
