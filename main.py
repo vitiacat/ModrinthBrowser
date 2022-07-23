@@ -277,7 +277,10 @@ class ModrinthBrowser(QMainWindow):
 
         language: QComboBox = dialog.findChild(QComboBox, 'language')
         language.addItems(languages.values())
-        language.setCurrentText(languages[self.settings.language])
+        if self.settings.language is not None:
+            language.setCurrentText(languages[self.settings.language])
+        else:
+            language.setCurrentText(languages.get(locale.name().split('_')[0], 'English'))
 
         def save_settings():
             if not os.path.exists(os.path.join(minecraft_path.text(), 'mods')):
@@ -618,7 +621,10 @@ def install_translation(application, lang: str):
     for translator in translators:
         application.removeTranslator(translator)
     translators.clear()
-
+    if lang == 'ru':
+        return
+    if lang not in ['en']:
+        lang = 'en'
     path = 'translations/' + lang
     print('Installing translation: ' + path)
     if os.path.exists(path):
@@ -634,11 +640,16 @@ def install_translation(application, lang: str):
                     print('Failed to load translation: ' + name)
 
 
+locale = QtCore.QLocale()
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     if os.path.exists('settings.json'):
         with open('settings.json', 'r') as f:
             settings = json.load(f)
-    install_translation(app, settings.get('language', 'en'))
+        install_translation(app, settings.get('language', 'en'))
+    else:
+        print('Using system language:', locale.name().split('_')[0])
+        install_translation(app, locale.name().split('_')[0])
     ex = ModrinthBrowser()
     sys.exit(app.exec())

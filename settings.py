@@ -8,7 +8,7 @@ class Settings:
         self.minecraft_path = ''
         self.rows_count = 20
         self.loader_type = None
-        self.language = 'en'
+        self.language = None
 
     def load(self):
         with open('settings.json', 'r') as f:
