@@ -55,7 +55,7 @@ jobs:
         pip install -r requirements.txt
     - name: Build
       run: |
-        pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py windows/view.py --noconsole --clean --onefile --name ModrinthBrowser --add-data translations;translations
+        pyinstaller main.py settings.py windows/download.py windows/main_window.py windows/progress.py windows/settings.py windows/view.py --noconsole --clean --onefile --name ModrinthBrowser --add-data translations:translations
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
