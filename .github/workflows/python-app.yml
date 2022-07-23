@@ -73,10 +73,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ModrinthBrowser
-      - name: Download artifact 2
-        uses: actions/download-artifact@v3
-        with:
-          path: translations
   release_windows-assets:
     name: Release assets
     needs:
@@ -89,7 +85,3 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ModrinthBrowser.exe
-      - name: Download artifact 2
-        uses: actions/download-artifact@v3
-        with:
-          path: translations

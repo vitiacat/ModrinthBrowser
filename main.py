@@ -254,9 +254,10 @@ class ModrinthBrowser(QMainWindow):
 
         paths = utils.find_mc_paths()
         if len(paths) > 0:
-            minecraft_path_variants.addItems(paths)
+            minecraft_path_variants.addItems([''] + paths)
             minecraft_path_variants.setCurrentText(minecraft_path.text())
-            minecraft_path_variants.currentTextChanged.connect(minecraft_path.setText)
+            minecraft_path_variants.currentTextChanged.connect(lambda text: (minecraft_path.setText(text),
+                                                                             check_settings()))
         else:
             minecraft_path_variants.setVisible(False)
 
