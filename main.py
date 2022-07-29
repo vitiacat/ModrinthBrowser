@@ -223,7 +223,7 @@ class ModrinthBrowser(QMainWindow):
         view: QWebEngineView = QWebEngineView()
         dialog.findChild(QtWidgets.QGridLayout, 'gridLayout_2').addWidget(view)
         view.page().setWebChannel(channel)
-        view.setUrl(QUrl.fromLocalFile(os.path.join(os.path.dirname(__file__), 'web', 'index.html')))
+        view.setUrl(QUrl.fromLocalFile(os.path.join(os.getcwd(), 'web', 'index.html')))
 
         def check_url(url: QUrl):
             if url.host() == 'modrinth.com':
